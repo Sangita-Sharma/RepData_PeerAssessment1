@@ -1,25 +1,60 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+author: "SangitaSharma"
+date: "February 29, 2016"
+html_document:
+keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
-
-
+cls = c("integer", "character", "integer")
+datafile <- read.csv("activity.csv", head=TRUE, colClasses=cls, na.strings="NA")
 
 ## What is mean total number of steps taken per day?
 
+stepsperday <- tapply(datafile$steps, datafile$date, sum, na.rm=TRUE)
+hist(x=stepsperday, col="green", breaks=20, xlab="Total Steps per Day", ylab="Frequency", main="Total number of steps taken each day")
 
+mean(stepsperday)
+median(stepsperday)
 
 ## What is the average daily activity pattern?
 
+averagestepinterval <- aggregate(x=list(meansteps=datafile$steps), by=list(interval=datafile$interval), FUN=mean, na.rm=TRUE)
+ggplot(data=averagestepinterval, aes(x=interval, y=meansteps)) + geom_line() + xlab("5 min Interval") +
+  +     ylab("Average number of steps taken")
 
+averagestepinterval[averagestepinterval$meansteps==max(averagestepinterval$meansteps),]
 
 ## Imputing missing values
-
+fulldata <- datafile
+isna <- is.na(fulldata$steps)
+avginterval <- tapply(fulldata$steps, fulldata$interval, mean, na.rm=TRUE, simplify=TRUE)
+fulldata$steps[isna] <- avginterval[as.character(fulldata$interval[isna])]
+sum(is.na(fulldata$steps))
+newstepsperday <- tapply(fulldata$steps, fulldata$date, sum)
+hist(x=newstepsperday, col="green", breaks=20, xlab="Total Steps per Day", ylab="Frequency", main="Total number of steps taken each day without NA values")
+mean(newstepsperday)
+median(newstepsperday)
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+#new data frame
+newfulldata <- fulldata
+#keep all weekends
+weekend <- weekdays(as.Date(newfulldata$date)) %in% c("Saturday", "Sunday")
+# fill in weekdays column
+newfulldata$daytype <- "weekday"
+## replace "weekday" with "weekend" where days are Saturday or Sunday
+newfulldata$daytype[weekend == TRUE] <- "weekend"
+## convert new character column to factor
+newfulldata$daytype <- as.factor(newfulldata$daytype)
+
+
+newfulldata <- aggregate(steps ~ interval + dateType, data=newfulldata, mean)
+ggplot(newfulldata, aes(interval, steps)) + 
+  geom_line() + 
+  facet_grid(daytype ~ .) +
+  xlab("5-minute interval") + 
+  ylab("avarage number of steps")
